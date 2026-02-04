@@ -71,6 +71,12 @@ async def async_setup_entry(hass: HomeAssistant, config: ConfigEntry) -> bool:
                 "home": config.data[CONF_FILE_PATH],
                 "temp": "temp",
             },
+            # Enable deno-bridge for JavaScript runtime
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["web"]
+                }
+            },
         }
         
         # Pass through additional yt-dlp options
