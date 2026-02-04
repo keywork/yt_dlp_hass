@@ -71,10 +71,11 @@ async def async_setup_entry(hass: HomeAssistant, config: ConfigEntry) -> bool:
                 "home": config.data[CONF_FILE_PATH],
                 "temp": "temp",
             },
-            # Enable deno-bridge for JavaScript runtime
+            # Use multiple clients with QuickJS JavaScript runtime
             "extractor_args": {
                 "youtube": {
-                    "player_client": ["web"]
+                    "player_client": ["web", "android", "ios"],
+                    "skip": ["hls", "dash"],
                 }
             },
         }
