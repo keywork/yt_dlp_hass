@@ -1,4 +1,5 @@
 """The hass_ytdlp component."""
+import asyncio
 import logging
 import os
 import re
@@ -20,58 +21,49 @@ _LOGGER = logging.getLogger(__name__)
 
 ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
-async def async_setup_entry(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup_entry(hass: HomeAssistant, config: ConfigEntry) -> bool:
     """Set up the hass_ytdlp component."""    
     hass.states.async_set(f"{DOMAIN}.downloader", "0")
-    if not os.path.isdir(config.data[CONF_FILE_PATH]):
-        os.mkdir(config.data[CONF_FILE_PATH], 0o755)
+    
+    # Create download directory asynchronously
+    download_path = config.data[CONF_FILE_PATH]
+    if not await hass.async_add_executor_job(os.path.isdir, download_path):
+        await hass.async_add_executor_job(os.makedirs, download_path, 0o755)
 
     def progress_hook(d):
         """Update download progress & Update the state of the entity"""
-        attr = hass.states.get(f"{DOMAIN}.downloader").attributes.copy()
-        filename = d["info_dict"]["filename"].split("/")[-1]
-        if d["status"] == "finished":
-            hass.states.set(f"{DOMAIN}.downloader", len(attr), attr)
-            attr.pop(filename)
-            _LOGGER.info("download finished")
-        if d["status"] == "downloading":
-            try:
-                speed = d["speed"]
-            except KeyError as e:
-                speed = 0
-                _LOGGER.warning(e)
-            try:
-                downloaded = d["downloaded_bytes"]
-            except KeyError as e:
-                downloaded = 0
-                _LOGGER.warning(e)
-            try:
-                total = d["total_bytes"]
-            except KeyError as e:
-                total = "Nan"
-                _LOGGER.warning(e)
-            try:
-                eta = d["eta"]
-            except KeyError as e:
-                eta = 0
-                _LOGGER.warning(e)
-                
-            attr[filename] = {
-                "speed": speed,
-                "downloaded": downloaded,
-                "total": total,
-                "eta": eta,
-            }
-        if d["status"] == "error":
-            hass.states.set(f"{DOMAIN}.downloader", len(attr), attr)
-            attr.pop(filename)
-            _LOGGER.error("download error")
+        state = hass.states.get(f"{DOMAIN}.downloader")
+        if state is None:
+            _LOGGER.warning("Downloader state entity not found")
+            return
             
-        hass.states.set(f"{DOMAIN}.downloader", len(attr), attr)
+        attr = dict(state.attributes)
+        filename = d["info_dict"]["filename"].split("/")[-1]
+        
+        if d["status"] == "finished":
+            attr.pop(filename, None)
+            _LOGGER.info("Download finished: %s", filename)
+        elif d["status"] == "downloading":
+            attr[filename] = {
+                "speed": d.get("speed", 0),
+                "downloaded": d.get("downloaded_bytes", 0),
+                "total": d.get("total_bytes", "Unknown"),
+                "eta": d.get("eta", 0),
+            }
+        elif d["status"] == "error":
+            attr.pop(filename, None)
+            _LOGGER.error("Download error: %s", filename)
+        
+        # Schedule state update on the event loop
+        hass.loop.call_soon_threadsafe(
+            hass.states.async_set, f"{DOMAIN}.downloader", len(attr), attr
+        )
 
-    def download(call):
+    async def download(call: ServiceCall):
         """Download a video."""
-        # logger = DLP_Logger(self.downloads, hook.id)
+        url = call.data["url"]
+        _LOGGER.info("Starting download: %s", url)
+        
         ydl_opts = {
             'ignoreerrors': True,
             "progress_hooks": [progress_hook],
@@ -80,11 +72,23 @@ async def async_setup_entry(hass: HomeAssistant, config: ConfigType) -> bool:
                 "temp": "temp",
             },
         }
+        
+        # Pass through additional yt-dlp options
         for k, v in call.data.items():
             if k not in ["url", "progress_hooks", "paths"]:
                 ydl_opts[k] = v
-        with YoutubeDL(ydl_opts) as ydl:
-            ydl.download([call.data["url"]])
+        
+        # Run blocking yt-dlp operation in executor
+        def _download():
+            try:
+                with YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([url])
+            except Exception as e:
+                _LOGGER.error("Download failed for %s: %s", url, e)
+                raise
+        
+        await hass.async_add_executor_job(_download)
+        _LOGGER.info("Download completed: %s", url)
 
     from urllib.parse import urlparse
     hass.services.async_register( 
