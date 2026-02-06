@@ -71,10 +71,10 @@ async def async_setup_entry(hass: HomeAssistant, config: ConfigEntry) -> bool:
                 "home": config.data[CONF_FILE_PATH],
                 "temp": "temp",
             },
-            # Use multiple clients with QuickJS JavaScript runtime
+            # Use mobile/TV clients that don't require JavaScript execution
             "extractor_args": {
                 "youtube": {
-                    "player_client": ["web", "android", "ios"],
+                    "player_client": ["ios", "tv_embedded"],  # No QuickJS needed
                     "skip": ["hls", "dash"],
                 }
             },
