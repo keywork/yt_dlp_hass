@@ -71,11 +71,10 @@ async def async_setup_entry(hass: HomeAssistant, config: ConfigEntry) -> bool:
                 "home": config.data[CONF_FILE_PATH],
                 "temp": "temp",
             },
-            # Use mobile/TV clients that don't require JavaScript execution
+            # Use android/mweb clients that work without PO tokens or JavaScript
             "extractor_args": {
                 "youtube": {
-                    "player_client": ["ios", "tv_embedded"],  # No QuickJS needed
-                    "skip": ["hls", "dash"],
+                    "player_client": ["android", "mweb"],  # No PO token or QuickJS needed
                 }
             },
         }
