@@ -21,9 +21,12 @@ _LOGGER = logging.getLogger(__name__)
 
 ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
+PLATFORMS = ["sensor"]
+
 async def async_setup_entry(hass: HomeAssistant, config: ConfigEntry) -> bool:
     """Set up the hass_ytdlp component."""    
-    hass.states.async_set(f"{DOMAIN}.downloader", "0")
+    # Forward entry setup to sensor platform
+    await hass.config_entries.async_forward_entry_setups(config, PLATFORMS)
     
     # Create download directory asynchronously
     download_path = config.data[CONF_FILE_PATH]
@@ -32,9 +35,11 @@ async def async_setup_entry(hass: HomeAssistant, config: ConfigEntry) -> bool:
 
     def progress_hook(d):
         """Update download progress & Update the state of the entity"""
-        state = hass.states.get(f"{DOMAIN}.downloader")
+        # Get sensor entity from registry
+        entity_id = f"sensor.{DOMAIN}_downloader"
+        state = hass.states.get(entity_id)
         if state is None:
-            _LOGGER.warning("Downloader state entity not found")
+            _LOGGER.warning("Downloader sensor entity not found")
             return
             
         attr = dict(state.attributes)
@@ -54,10 +59,12 @@ async def async_setup_entry(hass: HomeAssistant, config: ConfigEntry) -> bool:
             attr.pop(filename, None)
             _LOGGER.error("Download error: %s", filename)
         
-        # Schedule state update on the event loop
-        hass.loop.call_soon_threadsafe(
-            hass.states.async_set, f"{DOMAIN}.downloader", len(attr), attr
-        )
+        # Update sensor entity
+        from .sensor import YTDLPDownloaderSensor
+        for entity in hass.data.get(DOMAIN, {}).get("entities", []):
+            if isinstance(entity, YTDLPDownloaderSensor):
+                entity.update_progress(attr)
+                break
 
     async def download(call: ServiceCall):
         """Download a video."""
@@ -108,7 +115,9 @@ async def async_setup_entry(hass: HomeAssistant, config: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle removal of an entry."""
-    hass.states.async_remove(f"{DOMAIN}.downloader")
     hass.services.async_remove(DOMAIN, "download")
-
-    return True
+    
+    # Unload platforms
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    
+    return unload_ok
