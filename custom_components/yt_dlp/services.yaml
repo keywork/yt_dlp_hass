@@ -9,3 +9,11 @@ download:
       required: true
       selector:
         text:
+    audio_only:
+      name: Audio Only
+      description: Download and convert to MP3 audio only
+      example: true
+      required: false
+      default: false
+      selector:
+        boolean:

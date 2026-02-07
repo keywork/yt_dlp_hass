@@ -69,7 +69,8 @@ async def async_setup_entry(hass: HomeAssistant, config: ConfigEntry) -> bool:
     async def download(call: ServiceCall):
         """Download a video."""
         url = call.data["url"]
-        _LOGGER.info("Starting download: %s", url)
+        audio_only = call.data.get("audio_only", False)
+        _LOGGER.info("Starting download: %s (audio_only: %s)", url, audio_only)
         
         ydl_opts = {
             'ignoreerrors': True,
@@ -79,13 +80,36 @@ async def async_setup_entry(hass: HomeAssistant, config: ConfigEntry) -> bool:
                 "home": config.data[CONF_FILE_PATH],
                 "temp": "temp",
             },
+            # Clean filename without video ID
+            "outtmpl": "%(title)s.%(ext)s",
             # Use android/mweb clients that work without PO tokens or JavaScript
             "extractor_args": {
                 "youtube": {
                     "player_client": ["android", "mweb"],  # No PO token or QuickJS needed
                 }
             },
+            # Post-processor to clean up common title suffixes
+            "postprocessors": [{
+                "key": "ModifyMetadata",
+                "title": [
+                    # Remove common video type indicators
+                    {"regex": r"\s*\(Official\s+(Video|Audio|Music\s+Video|Lyric\s+Video)\)\s*$", "replace": ""},
+                    # Remove [Official Video] style brackets
+                    {"regex": r"\s*\[Official\s+(Video|Audio|Music\s+Video|Lyric\s+Video)\]\s*$", "replace": ""},
+                    # Remove trailing dashes/pipes with channel names
+                    {"regex": r"\s*[-|]\s*[^-|]+$", "replace": ""},
+                ],
+            }],
         }
+        
+        # If audio_only is requested, add audio extraction postprocessor
+        if audio_only:
+            ydl_opts['format'] = 'bestaudio/best'
+            ydl_opts['postprocessors'].append({
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            })
         
         # Pass through additional yt-dlp options
         for k, v in call.data.items():
