@@ -73,6 +73,7 @@ async def async_setup_entry(hass: HomeAssistant, config: ConfigEntry) -> bool:
         
         ydl_opts = {
             'ignoreerrors': True,
+            'noplaylist': True,  # Only download single video, not entire playlist
             "progress_hooks": [progress_hook],
             "paths": {
                 "home": config.data[CONF_FILE_PATH],
