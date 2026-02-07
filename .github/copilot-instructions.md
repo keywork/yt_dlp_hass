@@ -1,7 +1,7 @@
 # Copilot Instructions for yt_dlp_hass
 
 ## Project Overview
-Home Assistant custom integration wrapping the `yt-dlp` Python library. Enables video downloads from YouTube and 1000+ sites via Home Assistant services. Distributed via HACS, pairs with [`yt_dlp-card`](https://github.com/ybk5053/yt_dlp-card) for UI.
+Home Assistant custom integration wrapping the `yt-dlp` Python library. Enables video downloads from YouTube and 1000+ sites via Home Assistant services. Distributed via HACS, pairs with [`yt_dlp-card`](https://github.com/keywork/yt_dlp-card) for UI.
 
 ## Architecture
 
@@ -292,7 +292,7 @@ pytest tests/ -v
   "render_readme": true
 }
 ```
-**Installation**: Users add `https://github.com/ybk5053/yt_dlp_hass` as custom repository (Integration category) in HACS.
+**Installation**: Users add `https://github.com/keywork/yt_dlp_hass` as custom repository (Integration category) in HACS.
 
 ## Integration Points
 
@@ -312,7 +312,7 @@ pytest tests/ -v
 - **urllib.parse**: URL validation via `urlparse().scheme`
 
 ### With Frontend (Optional)
-- **[yt_dlp-card](https://github.com/ybk5053/yt_dlp-card)**: Custom Lovelace card reads `yt_dlp.downloader` state
+- **[yt_dlp-card](https://github.com/keywork/yt_dlp-card)**: Custom Lovelace card reads `yt_dlp.downloader` state
 - **Developer Tools**: Built-in Home Assistant UI for calling services and viewing state
 
 ## When to Modify Key Files
