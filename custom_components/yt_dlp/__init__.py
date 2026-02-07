@@ -59,11 +59,11 @@ async def async_setup_entry(hass: HomeAssistant, config: ConfigEntry) -> bool:
             attr.pop(filename, None)
             _LOGGER.error("Download error: %s", filename)
         
-        # Update sensor entity
+        # Update sensor entity (thread-safe)
         from .sensor import YTDLPDownloaderSensor
         for entity in hass.data.get(DOMAIN, {}).get("entities", []):
             if isinstance(entity, YTDLPDownloaderSensor):
-                entity.update_progress(attr)
+                hass.loop.call_soon_threadsafe(entity.update_progress, attr)
                 break
 
     async def download(call: ServiceCall):

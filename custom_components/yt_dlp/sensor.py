@@ -36,6 +36,8 @@ class YTDLPDownloaderSensor(SensorEntity):
         self._config_entry = config_entry
         self._attr_name = "Downloader"
         self._attr_unique_id = f"{DOMAIN}_downloader"
+        self._attr_has_entity_name = True
+        self.entity_id = f"sensor.{DOMAIN}_downloader"  # Explicit entity_id
         self._attr_native_value = 0
         self._attr_extra_state_attributes = {}
 
@@ -53,4 +55,4 @@ class YTDLPDownloaderSensor(SensorEntity):
         """Update the sensor state and attributes."""
         self._attr_native_value = len(attributes)
         self._attr_extra_state_attributes = attributes
-        self.async_write_ha_state()
+        self.schedule_update_ha_state()
