@@ -88,28 +88,22 @@ async def async_setup_entry(hass: HomeAssistant, config: ConfigEntry) -> bool:
                     "player_client": ["android", "mweb"],  # No PO token or QuickJS needed
                 }
             },
-            # Post-processor to clean up common title suffixes
-            "postprocessors": [{
-                "key": "ModifyMetadata",
-                "title": [
-                    # Remove common video type indicators
-                    {"regex": r"\s*\(Official\s+(Video|Audio|Music\s+Video|Lyric\s+Video)\)\s*$", "replace": ""},
-                    # Remove [Official Video] style brackets
-                    {"regex": r"\s*\[Official\s+(Video|Audio|Music\s+Video|Lyric\s+Video)\]\s*$", "replace": ""},
-                    # Remove trailing dashes/pipes with channel names
-                    {"regex": r"\s*[-|]\s*[^-|]+$", "replace": ""},
-                ],
-            }],
+            # Clean up common title suffixes in filenames
+            "postprocessor_args": {
+                "default": {
+                    "skip_unavailable_fragments": False
+                }
+            }
         }
         
         # If audio_only is requested, add audio extraction postprocessor
         if audio_only:
             ydl_opts['format'] = 'bestaudio/best'
-            ydl_opts['postprocessors'].append({
+            ydl_opts['postprocessors'] = [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
                 'preferredquality': '192',
-            })
+            }]
         
         # Pass through additional yt-dlp options
         for k, v in call.data.items():
