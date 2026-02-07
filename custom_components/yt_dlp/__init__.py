@@ -78,7 +78,6 @@ async def async_setup_entry(hass: HomeAssistant, config: ConfigEntry) -> bool:
             "progress_hooks": [progress_hook],
             "paths": {
                 "home": config.data[CONF_FILE_PATH],
-                "temp": "temp",
             },
             # Clean filename without video ID
             "outtmpl": "%(title)s.%(ext)s",
@@ -88,12 +87,6 @@ async def async_setup_entry(hass: HomeAssistant, config: ConfigEntry) -> bool:
                     "player_client": ["android", "mweb"],  # No PO token or QuickJS needed
                 }
             },
-            # Clean up common title suffixes in filenames
-            "postprocessor_args": {
-                "default": {
-                    "skip_unavailable_fragments": False
-                }
-            }
         }
         
         # If audio_only is requested, add audio extraction postprocessor
@@ -104,6 +97,8 @@ async def async_setup_entry(hass: HomeAssistant, config: ConfigEntry) -> bool:
                 'preferredcodec': 'mp3',
                 'preferredquality': '192',
             }]
+            # Keep intermediate files for debugging if needed
+            ydl_opts['keepvideo'] = False
         
         # Pass through additional yt-dlp options
         for k, v in call.data.items():
